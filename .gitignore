@@ -1,0 +1,17 @@
+.env
+.env.secrets
+
+# AI CLI directories
+.ai.cli/
+
+# AI tool directories
+.claude/
+.codex/
+.cursor/
+.gemini/
+.github/
+.opencode/
+.windsurf/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
