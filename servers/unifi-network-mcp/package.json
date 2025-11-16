@@ -1,5 +1,5 @@
 {
-  "name": "unifi-controller-mcp",
+  "name": "unifi-network-mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "start:mcp": "node dist/mcp.js",
     "dev": "ts-node --esm src/cli.ts",
     "dev:mcp": "ts-node --esm src/mcp.ts",
-    "test:env": "ts-node --esm src/scripts/test-env.ts"
+    "test:env": "npm run build && node dist/scripts/test-env.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.1",

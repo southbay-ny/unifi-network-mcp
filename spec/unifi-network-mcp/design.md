@@ -2,7 +2,7 @@
 # Follow #enforce-spec.md for Design phase
 ---
 
-# Design: UniFi Controller MCP Server
+# Design: UniFi Network MCP Server
 
 ## Overview
 A Model Context Protocol (MCP) server that exposes read-only tools for retrieving UniFi Network controller data across multiple targets (controllers). It normalizes inventory, metrics, events/logs, and deployment information while preserving access to raw payloads on demand. Supports both UniFi OS (UDM/UDR/UXG) and classic controllers.
@@ -75,21 +75,15 @@ sequenceDiagram
 
 ### MCP Tools (read-only)
 - `listSites(target_id, raw?)`
-  - Returns sites from `/api/self/sites` or `/api/stat/sites`.
-- `getHealth(target_id, site?, raw?)`
-  - `GET stat/health`.
+  - Returns sites from `/integration/v1/sites` (API key) or `/api/self/sites` (legacy).
 - `getSysinfo(target_id, site?, raw?)`
-  - `GET stat/sysinfo` and controller `/status` when available.
+  - `GET /integration/v1/info` for Integration targets; legacy fallback to `stat/sysinfo` + `/status`.
 - `getDevices(target_id, site?, raw?, macs?)`
-  - `GET stat/device` (optionally filter by `macs` via POST on classic controller), fallback `stat/device-basic`.
+  - `GET /integration/v1/sites/{siteId}/devices` for API key targets; legacy fallback `stat/device`/`stat/device-basic`.
 - `getClients(target_id, site?, raw?, active_only?)`
-  - `GET stat/sta` when `active_only=true`; include `rest/user` for known clients when false.
-- `getEvents(target_id, site?, raw?, start?, end?, limit?)`
-  - `GET stat/event` with limits; surface `meta.count` when truncated.
+  - `GET /integration/v1/sites/{siteId}/clients` for API key targets; legacy fallback `rest/user` + `stat/sta`.
 - `getAlarms(target_id, site?, raw?, archived?)`
-  - `GET stat/alarm` and optionally `rest/alarm` depending on controller.
-- `postReport(target_id, site?, interval, type, attributes[], macs[]?, raw?)`
-  - `POST stat/report/{interval}.{type}`; supports `5minutes|hourly|daily` and `site|user|ap`.
+  - `GET stat/alarm` and optionally `rest/alarm`; only available for legacy session auth.
 
 Inputs: all tools accept `target_id` and optional `site`; `raw` flag to include original payload. Outputs: normalized object plus optional `raw`.
 

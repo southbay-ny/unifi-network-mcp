@@ -24,9 +24,18 @@ export class HttpClient {
       validateStatus: () => true
     });
     this.axios = wrapper(instance);
-    // @ts-ignore: axios-cookiejar-support types
-    this.axios.defaults.jar = this.session.jar;
-    this.axios.defaults.withCredentials = true;
+
+    const hasApiKey = 'auth' in target && (target.auth as any).apiKey;
+    if (!hasApiKey) {
+      // Session/cookie-based auth for username/password targets
+      // @ts-ignore: axios-cookiejar-support types
+      this.axios.defaults.jar = this.session.jar;
+      this.axios.defaults.withCredentials = true;
+    } else {
+      // For API-key based Integration API calls, behave like curl:
+      // no cookies, no withCredentials. Auth is via header only.
+      this.axios.defaults.withCredentials = false;
+    }
 
     if (target.verify_ssl === false) {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';

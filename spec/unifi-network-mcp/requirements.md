@@ -1,4 +1,4 @@
-# Feature: UniFi Controller MCP Server
+# Feature: UniFi Network MCP Server
 
 ## Introduction
 A Model Context Protocol (MCP) server that connects to one or more UniFi Network/UniFi OS controllers to retrieve metrics, inventory, logs/events, and general deployment information across sites. It supports multiple controller targets, credentials or tokens, robust authentication/session handling, and read-only data retrieval via well-known UniFi Network API endpoints.
@@ -10,12 +10,10 @@ A Model Context Protocol (MCP) server that connects to one or more UniFi Network
 4. The system shall include the `X-CSRF-Token` header where required by UniFi OS for state-changing endpoints and some GETs; token value obtained from login response/cookie when available.
 5. The system shall route UniFi OS Network Application requests through `/proxy/network/api/...` (e.g., `/proxy/network/api/s/{site}/stat/device`), and classic controllers through `/api/...` (e.g., `/api/s/{site}/stat/device`).
 6. The system shall provide read-only tools for:
-   1. Sites: list all sites on a controller (`/api/self/sites` or `/api/stat/sites`).
-   2. Health: get site health (`stat/health`).
-   3. Inventory: get devices (`stat/device`, `stat/device-basic`) and known/active clients (`rest/user`, `stat/sta`).
-   4. Logs: get events (`stat/event`) and alarms (`stat/alarm`, `rest/alarm`, with archived filter).
-   5. Deployment info: get controller/system info and site sysinfo (`stat/sysinfo`), controller version (`status`), site name/id, device firmware and adoption status (from device payloads).
-   6. Reports: `stat/report/{interval}.{type}` with attributes and optional `macs` filtering.
+   1. Sites: list all sites on a controller (`/integration/v1/sites` for API key targets, legacy `/api/self/sites` otherwise).
+   2. Inventory: get devices via `/integration/v1/sites/{siteId}/devices` (API key) or `stat/device` (legacy) and clients via `/integration/v1/sites/{siteId}/clients` (API key) or `rest/user` + `stat/sta` (legacy).
+   3. Logs: get alarms (`stat/alarm`, `rest/alarm`, with archived filter).
+   4. Deployment info: get controller/system info via `/integration/v1/info` or legacy `stat/sysinfo` + `/status` when available.
 7. The system shall support pagination/limits and time filtering where available (e.g., events, sessions) and surface truncation indications (e.g., `meta.count`).
 8. The system shall expose a capability to select `site` per call overriding the controller default.
 9. The system shall normalize responses to stable schemas and surface raw payloads when requested (pass-through mode).

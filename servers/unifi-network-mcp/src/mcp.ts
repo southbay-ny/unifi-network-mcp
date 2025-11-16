@@ -10,13 +10,10 @@ import {
   HttpClient,
   TargetConfig,
   listSites,
-  getHealth,
   getSysinfo,
   getDevices,
   getClients,
-  getEvents,
-  getAlarms,
-  postReport
+  getAlarms
 } from './index.js';
 
 let targets: TargetConfig[];
@@ -24,7 +21,7 @@ let targetIndex: Map<string, TargetConfig>;
 let httpClients: Map<string, HttpClient>;
 
 const server = new Server({
-  name: 'unifi-controller-mcp',
+  name: 'unifi-network-mcp',
   version: '0.1.0'
 }, {
   capabilities: {
@@ -75,27 +72,23 @@ const listTargetsInputSchema = z.object({});
 type ListTargetsInput = z.infer<typeof listTargetsInputSchema>;
 
 const listSitesInputSchema = z.object({
-  targetId: z.string(),
-  raw: z.boolean().optional()
+  targetId: z.string().optional(),
+  raw: z.boolean().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  filter: z.string().optional()
 });
 type ListSitesInput = z.infer<typeof listSitesInputSchema>;
 
-const getHealthInputSchema = z.object({
-  targetId: z.string(),
-  site: z.string().optional(),
-  raw: z.boolean().optional()
-});
-type GetHealthInput = z.infer<typeof getHealthInputSchema>;
-
 const getSysinfoInputSchema = z.object({
-  targetId: z.string(),
+  targetId: z.string().optional(),
   site: z.string().optional(),
   raw: z.boolean().optional()
 });
 type GetSysinfoInput = z.infer<typeof getSysinfoInputSchema>;
 
 const getDevicesInputSchema = z.object({
-  targetId: z.string(),
+  targetId: z.string().optional(),
   site: z.string().optional(),
   raw: z.boolean().optional(),
   macs: z.array(z.string()).optional()
@@ -103,41 +96,20 @@ const getDevicesInputSchema = z.object({
 type GetDevicesInput = z.infer<typeof getDevicesInputSchema>;
 
 const getClientsInputSchema = z.object({
-  targetId: z.string(),
+  targetId: z.string().optional(),
   site: z.string().optional(),
   raw: z.boolean().optional(),
   activeOnly: z.boolean().optional()
 });
 type GetClientsInput = z.infer<typeof getClientsInputSchema>;
 
-const getEventsInputSchema = z.object({
-  targetId: z.string(),
-  site: z.string().optional(),
-  raw: z.boolean().optional(),
-  start: z.number().optional(),
-  end: z.number().optional(),
-  limit: z.number().optional()
-});
-type GetEventsInput = z.infer<typeof getEventsInputSchema>;
-
 const getAlarmsInputSchema = z.object({
-  targetId: z.string(),
+  targetId: z.string().optional(),
   site: z.string().optional(),
   raw: z.boolean().optional(),
   archived: z.boolean().optional()
 });
 type GetAlarmsInput = z.infer<typeof getAlarmsInputSchema>;
-
-const postReportInputSchema = z.object({
-  targetId: z.string(),
-  site: z.string().optional(),
-  raw: z.boolean().optional(),
-  interval: z.string().optional(),
-  type: z.string().optional(),
-  attributes: z.record(z.any()).optional(),
-  macs: z.array(z.string()).optional()
-});
-type PostReportInput = z.infer<typeof postReportInputSchema>;
 
 // Tool result union type
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; structuredContent: Record<string, unknown> } | { content: Array<{ type: 'text'; text: string }>; structuredContent: Record<string, unknown>; isError: true };
@@ -169,11 +141,6 @@ const tools = [
     inputSchema: zodToJsonSchema(listSitesInputSchema)
   },
   {
-    name: 'get_health',
-    description: 'Retrieve UniFi site health summary',
-    inputSchema: zodToJsonSchema(getHealthInputSchema)
-  },
-  {
     name: 'get_sysinfo',
     description: 'Retrieve UniFi controller and site sysinfo',
     inputSchema: zodToJsonSchema(getSysinfoInputSchema)
@@ -189,19 +156,9 @@ const tools = [
     inputSchema: zodToJsonSchema(getClientsInputSchema)
   },
   {
-    name: 'get_events',
-    description: 'Retrieve UniFi events for a site with optional time range',
-    inputSchema: zodToJsonSchema(getEventsInputSchema)
-  },
-  {
     name: 'get_alarms',
     description: 'Retrieve UniFi alarms for a site',
     inputSchema: zodToJsonSchema(getAlarmsInputSchema)
-  },
-  {
-    name: 'post_report',
-    description: 'Request UniFi report data for a site',
-    inputSchema: zodToJsonSchema(postReportInputSchema)
   }
 ];
 
@@ -241,16 +198,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!targetId) throw new Error("Tool 'list_sites' requires a targetId");
       return handleTool('list_sites', targetId, async () => {
         const { target, client } = getContext(targetId);
-        const result = await listSites(target, client, (a.raw as boolean) ?? false);
+        const result = await listSites(target, client, (a.raw as boolean) ?? false, {
+          offset: a.offset as number | undefined,
+          limit: a.limit as number | undefined,
+          filter: a.filter as string | undefined
+        });
         return createSuccess('list_sites', targetId, { result });
-      });
-    
-    case 'get_health':
-      if (!targetId) throw new Error("Tool 'get_health' requires a targetId");
-      return handleTool('get_health', targetId, async () => {
-        const { target, client } = getContext(targetId);
-        const result = await getHealth(target, client, a.site as string, (a.raw as boolean) ?? false);
-        return createSuccess('get_health', targetId, { result });
       });
     
     case 'get_sysinfo':
@@ -285,20 +238,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return createSuccess('get_clients', targetId, { result });
       });
     
-    case 'get_events':
-      if (!targetId) throw new Error("Tool 'get_events' requires a targetId");
-      return handleTool('get_events', targetId, async () => {
-        const { target, client } = getContext(targetId);
-        const result = await getEvents(target, client, {
-          site: a.site as string,
-          raw: (a.raw as boolean) ?? false,
-          start: a.start as number,
-          end: a.end as number,
-          limit: a.limit as number
-        });
-        return createSuccess('get_events', targetId, { result });
-      });
-    
     case 'get_alarms':
       if (!targetId) throw new Error("Tool 'get_alarms' requires a targetId");
       return handleTool('get_alarms', targetId, async () => {
@@ -309,21 +248,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           archived: (a.archived as boolean) ?? false
         });
         return createSuccess('get_alarms', targetId, { result });
-      });
-    
-    case 'post_report':
-      if (!targetId) throw new Error("Tool 'post_report' requires a targetId");
-      return handleTool('post_report', targetId, async () => {
-        const { target, client } = getContext(targetId);
-        const result = await postReport(target, client, {
-          site: a.site as string,
-          raw: (a.raw as boolean) ?? false,
-          interval: a.interval as '5minutes' | 'hourly' | 'daily',
-          type: a.type as 'site' | 'user' | 'ap',
-          attributes: a.attributes as string[],
-          macs: a.macs as string[]
-        });
-        return createSuccess('post_report', targetId, { result });
       });
     
     default:
