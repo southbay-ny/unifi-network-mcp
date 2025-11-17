@@ -1,0 +1,98 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: servers/unifi-network-mcp/package-lock.json
+
+      - name: Install dependencies
+        working-directory: servers/unifi-network-mcp
+        run: npm ci
+
+      - name: Build
+        working-directory: servers/unifi-network-mcp
+        run: npm run build
+
+      - name: Create tarball
+        working-directory: servers/unifi-network-mcp
+        run: |
+          VERSION=${GITHUB_REF_NAME:-latest}
+          tar -czf unifi-network-mcp-${VERSION}.tar.gz \
+            dist/ \
+            run-mcp.sh \
+            package.json \
+            package-lock.json \
+            README.md \
+            .env.example
+
+      - name: Generate checksum
+        working-directory: servers/unifi-network-mcp
+        run: |
+          VERSION=${GITHUB_REF_NAME:-latest}
+          shasum -a 256 unifi-network-mcp-${VERSION}.tar.gz > unifi-network-mcp-${VERSION}.tar.gz.sha256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            servers/unifi-network-mcp/unifi-network-mcp-*.tar.gz
+            servers/unifi-network-mcp/unifi-network-mcp-*.tar.gz.sha256
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## UniFi Network MCP ${{ github.ref_name }}
+            
+            Read-only MCP server for UniFi Network controllers.
+            
+            ### Installation
+            
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/unifi-network-mcp-${{ github.ref_name }}.tar.gz | tar -xz
+            cd unifi-network-mcp
+            cp .env.example .env
+            # Edit .env with your UNIFI_TARGETS
+            ./run-mcp.sh
+            ```
+            
+            ### What's included
+            - Compiled JavaScript (`dist/`)
+            - Launch script (`run-mcp.sh`)
+            - Environment template (`.env.example`)
+            - Documentation
+            
+            ### Supported tools
+            - `get_sysinfo` - Controller system information
+            - `list_sites` - List all sites
+            - `get_devices` - List devices
+            - `get_clients` - List clients
+            - `list_targets` - List configured targets
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update latest tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -f latest
+          git push -f origin latest
