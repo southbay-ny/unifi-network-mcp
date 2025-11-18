@@ -135,4 +135,4 @@ Returns application version, e.g. `{ "applicationVersion": "9.1.0" }`
 
 Copy-paste the above into any LLM for understanding or documentation use. If you need code examples or additional formatting, specify the endpoint or feature.
 
-[1](https://edge/unifi-api/network)
+[1](https://<unifi_host>/unifi-api/network)

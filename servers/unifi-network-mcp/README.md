@@ -26,7 +26,7 @@ Set `UNIFI_TARGETS` in your environment (preferred) or in a private `.env` file 
 [
   {
     "id": "home",
-    "base_url": "https://edge",
+    "base_url": "https://<unifi_host>",
     "controller_type": "unifi_os",
     "default_site": "default",
     "auth": { "apiKey": "${UNIFI_API_KEY}", "headerName": "X-API-KEY" },
@@ -43,7 +43,7 @@ Example `personal-access-tokens.env` snippet:
 export UNIFI_TARGETS='[
   {
     "id": "home",
-    "base_url": "https://edge",
+    "base_url": "https://<unifi_host>",
     "controller_type": "unifi_os",
     "default_site": "default",
     "auth": { "apiKey": "REDACTED", "headerName": "X-API-KEY" },

@@ -1,6 +1,6 @@
 {
   "name": "unifi-network-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Read-only MCP server for UniFi Network controllers",
   "type": "module",
   "main": "dist/mcp.js",
